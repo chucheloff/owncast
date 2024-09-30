@@ -54,15 +54,7 @@ export const OfflineBanner: FC<OfflineBannerProps> = ({
       </span>
     );
   } else if (!customText && notificationsEnabled) {
-    text = (
-      <span>
-        This stream is offline.{' '}
-        <span role="link" tabIndex={0} className={styles.actionLink} onClick={onNotifyClick}>
-          Be notified
-        </span>{' '}
-        the next time {streamName} goes live.
-      </span>
-    );
+    text = <span>This stream is offline. </span>;
   } else if (!customText && fediverseAccount) {
     text = (
       <span>

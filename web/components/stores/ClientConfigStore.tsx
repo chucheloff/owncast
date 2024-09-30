@@ -391,35 +391,6 @@ export const ClientConfigStore: FC = () => {
   // Read the config and status on initial load from a JSON string that lives
   // in window. This is placed there server-side and allows for fast initial
   // load times because we don't have to wait for the API calls to complete.
-  useEffect(() => {
-    try {
-      if ((window as any).configHydration) {
-        const config = JSON.parse((window as any).configHydration);
-        setClientConfig(config);
-        setHasLoadedConfig(true);
-      }
-    } catch (e) {
-      console.error('Error parsing config hydration', e);
-    }
-
-    try {
-      if ((window as any).statusHydration) {
-        const status = JSON.parse((window as any).statusHydration);
-        setServerStatus(status);
-        handleStatusChange(status);
-      }
-    } catch (e) {
-      console.error('error parsing status hydration', e);
-    }
-
-    try {
-      if ((window as any).configHydration && (window as any).statusHydration) {
-        sendEvent([AppStateEvent.Loaded]);
-      }
-    } catch (e) {
-      console.error('error sending loaded event', e);
-    }
-  }, []);
 
   useEffect(() => {
     if (clientConfig.chatDisabled) {
@@ -442,13 +413,7 @@ export const ClientConfigStore: FC = () => {
   }, [hasLoadedConfig, accessToken]);
 
   useEffect(() => {
-    if (!(window as any).configHydration) {
-      updateClientConfig();
-    }
     handleUserRegistration();
-    if (!(window as any).statusHydration) {
-      updateServerStatus();
-    }
     clearInterval(serverStatusRefreshPoll);
     serverStatusRefreshPoll = setInterval(() => {
       updateServerStatus();

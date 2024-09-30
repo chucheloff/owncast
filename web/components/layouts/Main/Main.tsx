@@ -10,25 +10,18 @@ import Script from 'next/script';
 import { ErrorBoundary } from 'react-error-boundary';
 import {
   ClientConfigStore,
-  isChatAvailableSelector,
   clientConfigStateAtom,
   fatalErrorStateAtom,
-  appStateAtom,
-  serverStatusState,
 } from '../../stores/ClientConfigStore';
 import { Content } from '../../ui/Content/Content';
-import { Header } from '../../ui/Header/Header';
 import { ClientConfig } from '../../../interfaces/client-config.model';
 import { DisplayableError } from '../../../types/displayable-error';
 import setupNoLinkReferrer from '../../../utils/no-link-referrer';
 import { TitleNotifier } from '../../TitleNotifier/TitleNotifier';
-import { ServerRenderedHydration } from '../../ServerRendered/ServerRenderedHydration';
 import { Theme } from '../../theme/Theme';
 import styles from './Main.module.scss';
 import { PushNotificationServiceWorker } from '../../workers/PushNotificationServiceWorker/PushNotificationServiceWorker';
-import { AppStateOptions } from '../../stores/application-state';
 import { Noscript } from '../../ui/Noscript/Noscript';
-import { ServerStatus } from '../../../interfaces/server-status.model';
 
 // Lazy loaded components
 
@@ -44,28 +37,19 @@ const FatalErrorStateModal = dynamic(
 
 export const Main: FC = () => {
   const clientConfig = useRecoilValue<ClientConfig>(clientConfigStateAtom);
-  const clientStatus = useRecoilValue<ServerStatus>(serverStatusState);
   const { name } = clientConfig;
-  const isChatAvailable = useRecoilValue<boolean>(isChatAvailableSelector);
   const fatalError = useRecoilValue<DisplayableError>(fatalErrorStateAtom);
-  const appState = useRecoilValue<AppStateOptions>(appStateAtom);
   const layoutRef = useRef<HTMLDivElement>(null);
-  const { chatDisabled } = clientConfig;
-  const { videoAvailable } = appState;
-  const { online, streamTitle } = clientStatus;
 
   useEffect(() => {
     setupNoLinkReferrer(layoutRef.current);
   }, []);
 
   const isProduction = process.env.NODE_ENV === 'production';
-  const headerText = online ? streamTitle || name : name;
 
   return (
     <>
       <Head>
-        {isProduction && <ServerRenderedHydration />}
-
         <link rel="apple-touch-icon" sizes="57x57" href="/img/favicon/apple-icon-57x57.png" />
         <link rel="apple-touch-icon" sizes="60x60" href="/img/favicon/apple-icon-60x60.png" />
         <link rel="apple-touch-icon" sizes="72x72" href="/img/favicon/apple-icon-72x72.png" />
@@ -93,7 +77,6 @@ export const Main: FC = () => {
           content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
         />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
         <base target="_blank" />
       </Head>
 
@@ -150,12 +133,6 @@ export const Main: FC = () => {
       <Theme />
       <Script strategy="afterInteractive" src="/customjavascript" />
       <Layout ref={layoutRef} className={styles.layout}>
-        <Header
-          name={headerText}
-          chatAvailable={isChatAvailable}
-          chatDisabled={chatDisabled}
-          online={videoAvailable}
-        />
         <Content />
         {fatalError && (
           <FatalErrorStateModal title={fatalError.title} message={fatalError.message} />

@@ -4,7 +4,6 @@ import MessageFilled from '@ant-design/icons/MessageFilled';
 import { FC, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import classnames from 'classnames';
-import ActionButtons from './ActionButtons';
 import { LOCAL_STORAGE_KEYS, getLocalStorage, setLocalStorage } from '../../../utils/localStorage';
 import { canPushNotificationsBeSupported } from '../../../utils/browserPushNotifications';
 
@@ -23,7 +22,6 @@ import {
 import { ClientConfig } from '../../../interfaces/client-config.model';
 
 import styles from './Content.module.scss';
-import desktopStyles from './DesktopContent.module.scss';
 import { OfflineBanner } from '../OfflineBanner/OfflineBanner';
 import { AppStateOptions } from '../../stores/application-state';
 import { ServerStatus } from '../../../interfaces/server-status.model';
@@ -31,10 +29,7 @@ import { Statusbar } from '../Statusbar/Statusbar';
 import { ChatMessage } from '../../../interfaces/chat-message.model';
 import { ExternalAction } from '../../../interfaces/external-action';
 import { Modal } from '../Modal/Modal';
-import { DesktopContent } from './DesktopContent';
-import { MobileContent } from './MobileContent';
 import { ChatModal } from '../../modals/ChatModal/ChatModal';
-import { Footer } from '../Footer/Footer';
 
 // Lazy loaded components
 const ChatContainer = dynamic(
@@ -49,17 +44,6 @@ const FollowModal = dynamic(
   {
     ssr: false,
     loading: () => <Skeleton loading active paragraph={{ rows: 8 }} />,
-  },
-);
-
-const BrowserNotifyModal = dynamic(
-  () =>
-    import('../../modals/BrowserNotifyModal/BrowserNotifyModal').then(
-      mod => mod.BrowserNotifyModal,
-    ),
-  {
-    ssr: false,
-    loading: () => <Skeleton loading active paragraph={{ rows: 6 }} />,
   },
 );
 
@@ -109,81 +93,24 @@ export const Content: FC = () => {
 
   const { viewerCount, lastConnectTime, lastDisconnectTime, streamTitle } =
     useRecoilValue<ServerStatus>(serverStatusState);
-  const {
-    extraPageContent,
-    name,
-    summary,
-    socialHandles,
-    tags,
-    externalActions,
-    offlineMessage,
-    chatDisabled,
-    federation,
-    notifications,
-  } = clientConfig;
-  const [showNotifyReminder, setShowNotifyReminder] = useState(false);
-  const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const { name, offlineMessage, chatDisabled, federation, notifications } = clientConfig;
   const [showFollowModal, setShowFollowModal] = useState(false);
-  const { account: fediverseAccount, enabled: fediverseEnabled } = federation;
+  const { account: fediverseAccount } = federation;
   const { browser: browserNotifications } = notifications;
   const { enabled: browserNotificationsEnabled } = browserNotifications;
   const { online: isStreamLive } = serverStatus;
   const [externalActionToDisplay, setExternalActionToDisplay] = useState<ExternalAction>(null);
-  const [currentBrowserWindowUrl, setCurrentBrowserWindowUrl] = useState('');
 
   const [supportsBrowserNotifications, setSupportsBrowserNotifications] = useState(false);
-  const supportFediverseFeatures = fediverseEnabled;
 
   const [showChatModal, setShowChatModal] = useState(false);
-
-  const externalActionSelected = (action: ExternalAction) => {
-    const { openExternally, url } = action;
-
-    if (url) {
-      const updatedUrl = new URL(url);
-      updatedUrl.searchParams.append('instance', currentBrowserWindowUrl);
-
-      if (currentUser) {
-        const { displayName } = currentUser;
-
-        // Append url and username to params so the link knows where we came from and who we are.
-        updatedUrl.searchParams.append('username', displayName);
-      }
-      const fullUrl = updatedUrl.toString();
-      // Overwrite URL with the updated one that includes the params.
-      const updatedAction = {
-        ...action,
-        url: fullUrl,
-      };
-
-      // apply openExternally only if we don't have an HTML embed
-      if (openExternally) {
-        window.open(fullUrl, '_blank');
-      } else {
-        setExternalActionToDisplay(updatedAction);
-      }
-    } else {
-      setExternalActionToDisplay(action);
-    }
-  };
 
   const incrementVisitCounter = () => {
     let visits = parseInt(getLocalStorage(LOCAL_STORAGE_KEYS.userVisitCount), 10);
     if (Number.isNaN(visits)) {
       visits = 0;
     }
-
     setLocalStorage(LOCAL_STORAGE_KEYS.userVisitCount, visits + 1);
-
-    if (visits > 2 && !getLocalStorage(LOCAL_STORAGE_KEYS.hasDisplayedNotificationModal)) {
-      setShowNotifyReminder(true);
-    }
-  };
-
-  const disableNotifyReminderPopup = () => {
-    setShowNotifyModal(false);
-    setShowNotifyReminder(false);
-    setLocalStorage(LOCAL_STORAGE_KEYS.hasDisplayedNotificationModal, true);
   };
 
   const checkIfMobile = () => {
@@ -212,10 +139,6 @@ export const Content: FC = () => {
       canPushNotificationsBeSupported() && browserNotificationsEnabled,
     );
   }, [browserNotificationsEnabled]);
-
-  useEffect(() => {
-    setCurrentBrowserWindowUrl(window.location.href);
-  }, []);
 
   const showChat = isChatAvailable && !chatDisabled && chatState === ChatState.VISIBLE;
 
@@ -248,7 +171,6 @@ export const Content: FC = () => {
                 notificationsEnabled={supportsBrowserNotifications}
                 fediverseAccount={fediverseAccount}
                 lastLive={lastDisconnectTime}
-                onNotifyClick={() => setShowNotifyModal(true)}
                 onFollowClick={() => setShowFollowModal(true)}
                 className={classnames([styles.topSectionElement, styles.offlineBanner])}
               />
@@ -266,57 +188,7 @@ export const Content: FC = () => {
             />
           )}
         </Row>
-        <Row>
-          <ActionButtons
-            supportFediverseFeatures={supportFediverseFeatures}
-            supportsBrowserNotifications={supportsBrowserNotifications}
-            showNotifyReminder={showNotifyReminder}
-            setShowNotifyModal={setShowNotifyModal}
-            disableNotifyReminderPopup={disableNotifyReminderPopup}
-            externalActions={externalActions || []}
-            setExternalActionToDisplay={setExternalActionToDisplay}
-            setShowFollowModal={setShowFollowModal}
-            externalActionSelected={externalActionSelected}
-          />
-        </Row>
-
-        <Modal
-          title="Browser Notifications"
-          open={showNotifyModal}
-          afterClose={() => disableNotifyReminderPopup()}
-          handleCancel={() => disableNotifyReminderPopup()}
-        >
-          <BrowserNotifyModal />
-        </Modal>
-        <Row>
-          {!name && <Skeleton active loading style={{ marginLeft: '10vw', marginRight: '10vw' }} />}
-          {isMobile ? (
-            <MobileContent
-              name={name}
-              summary={summary}
-              tags={tags}
-              socialHandles={socialHandles}
-              extraPageContent={extraPageContent}
-              setShowFollowModal={setShowFollowModal}
-              supportFediverseFeatures={supportFediverseFeatures}
-              online={online}
-            />
-          ) : (
-            <div className={desktopStyles.bottomSectionContent}>
-              <DesktopContent
-                name={name}
-                summary={summary}
-                tags={tags}
-                socialHandles={socialHandles}
-                extraPageContent={extraPageContent}
-                setShowFollowModal={setShowFollowModal}
-                supportFediverseFeatures={supportFediverseFeatures}
-              />
-            </div>
-          )}
-        </Row>
         <div style={{ flex: '1 1' }} />
-        <Footer />
       </div>
       {showChat && !isMobile && currentUser && (
         <ChatContainer
